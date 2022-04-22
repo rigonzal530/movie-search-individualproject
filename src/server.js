@@ -94,8 +94,7 @@ app.post('/add', (req, res) =>
     const releaseDate = req.body.release;
     const rating = req.body.rating;
     const plot = req.body.plot;
-    // this query currently allows duplicates
-    var insertMovie = `INSERT INTO movies(poster, title, release, rating, plot) VALUES('${poster}', '${title}', '${releaseDate}', ${rating}, '${plot}');`;
+    var insertMovie = `INSERT INTO movies(poster, title, release, rating, plot) VALUES('${poster}', '${title}', '${releaseDate}', ${rating}, '${plot}') ON CONFLICT (plot) DO NOTHING;`;
 
     // writes the "insertMovie" query to the database
     db.any(insertMovie)

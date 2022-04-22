@@ -17,13 +17,11 @@ function getMovieData()
     // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format
     if (userSearch.match(imdbIDRegex))
     {
-        console.log("userSearch was appended as an ID");
         url += `i=${userSearch}`;
     }
     // else "userSearch" wasn't an IMDB id, so it's a title. appends "userSearch" to "url" with the Title format
     else
     {
-        console.log("userSearch was appended as a title");
         url += `t=${userSearch}`;
     }
 
