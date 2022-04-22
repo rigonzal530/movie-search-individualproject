@@ -1,0 +1,31 @@
+<%- include('../partials/header') %>
+<%- include('../partials/menu') %>
+<body style="background-color:rgb(136, 172, 224)">
+    <div class="container-fluid" style="background-color:rgb(0, 71, 171); padding: 1%;">
+        <form action="javascript:getMovieData();">
+            <div class="input-group mr-auto ml-auto" style="width: 50%; background-color: white; border-radius: 1rem;">
+                <input class="form-control" type="text" id="search_input" placeholder="Search for a movie by entering its title OR its IMDB ID (e.g. Thor OR tt0800369)" style="border-radius: 1rem; border-color: transparent;"/>
+                <button class="btn btn-success" type="submit" style="border: none; background-color:transparent; color: rgb(0, 71, 171);">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="container pt-4" id="card_container">
+    </div>
+    <div class="modal fade" id="myModal">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Are you sure you would like to add this result?</h5><hr>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group" style="width: 100%;">
+                        <button onclick="searchModal()" type="button" class="btn btn-primary" data-dismiss="modal" style="width: 50%; background-color: forestgreen;"> Yes </button>
+                        <button type="button" class="btn btn-danger" data-dismiss="modal" style="width: 50%; background-color: firebrick;"> No </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<%- include('../partials/footer') %>

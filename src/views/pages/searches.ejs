@@ -1,0 +1,26 @@
+<%- include('../partials/header') %>
+<%- include('../partials/menu') %>
+<body style="background-color:rgb(136, 172, 224)">
+    <div class="container pt-4">
+        <table class="table" id="movies_table">
+            <tr class="text-center" style="color:white; font-size: large;">
+                <th> Poster </th>
+                <th> Title </th>
+                <th> Release Date </th>
+                <th> IMDB Rating</th>
+                <th> Plot </th>
+            </tr>
+            <% if (data) { %>
+                <% data.forEach((row) => { %>
+                    <tr class="text-center" style="color: white;">
+                        <td><img style="height: 200px; object-fit: scale-down;" src=<%= row.poster %> alt=Poster for <%= row.title%>></td>
+                        <td><p style="font-weight: bold"> <%= row.title %></p></td>
+                        <td><p> <%= row.release %></p></td>
+                        <td><p> <%= row.rating %></p></td>
+                        <td><p> <%= row.plot %></p></td>
+                    </tr>
+                <% }); %>
+            <% } %>
+        </table>
+    </div>
+<%- include('../partials/footer') %>
