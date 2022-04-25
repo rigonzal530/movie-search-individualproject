@@ -79,7 +79,7 @@ app.get('/searches', (req, res) =>
         console.log("error: ", err);
         res.render('pages/searches',
         {
-            myTitle: "Search History Error",
+            myTitle: "Search History",
             data: null
         });
     })
@@ -94,7 +94,9 @@ app.post('/add', (req, res) =>
     const releaseDate = req.body.release;
     const rating = req.body.rating;
     const plot = req.body.plot;
-    var insertMovie = `INSERT INTO movies(poster, title, release, rating, plot) VALUES('${poster}', '${title}', '${releaseDate}', ${rating}, '${plot}') ON CONFLICT (plot) DO NOTHING;`;
+    // this query prevents duplicates from being added, but "data" has no way to distinguish whether ON CONFLICT was used or not
+    // consequently, the feedback for attempting to add a duplicate is dealt with in script.js
+    var insertMovie = `INSERT INTO movies(poster, title, release, rating, plot) VALUES('${poster}', '${title}', '${releaseDate}', ${rating}, '${plot}') ON CONFLICT (title) DO NOTHING;`;
 
     // writes the "insertMovie" query to the database
     db.any(insertMovie)
@@ -109,6 +111,35 @@ app.post('/add', (req, res) =>
     });
 })
 
-const server = app.listen(process.env.PORT || 3000, () => {
-    console.log(`Express running → PORT ${server.address().port}`);
-  });
+// deletes all records in the movies table
+app.post('/delete', (req, res) =>
+{
+    // query to remove all rows from the movies table
+    var deleteAll = "DELETE FROM movies;";
+
+    // writes the "deleteAll" query to the database
+    db.any(deleteAll)
+    .then((data) =>
+    {
+        res.render('pages/searches',
+        {
+            myTitle: "Search History",
+            data: data
+        });
+    })
+    .catch((err) => 
+    {
+        res.render('pages/searches',
+        {
+            myTitle: "Search History",
+            data: null
+        });
+        console.log("error: ", err);
+    });
+})
+
+// const server = app.listen(process.env.PORT || 3000, () => {
+//     console.log(`Express running → PORT ${server.address().port}`);
+//   });
+module.exports = app.listen(process.env.PORT || 3000);
+console.log((process.env.PORT || 3000), "is the magic port");

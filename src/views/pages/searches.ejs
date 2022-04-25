@@ -1,7 +1,9 @@
 <%- include('../partials/header') %>
 <%- include('../partials/menu') %>
 <body style="background-color:rgb(136, 172, 224)">
-    <div class="container pt-4">
+    <div class="container pt-4 text-center">
+        <% if (data.length != 0) { %>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal" style="background-color: firebrick; min-width: fit-content; border-radius: 1rem;">Delete Search History</button>
         <table class="table" id="movies_table">
             <tr class="text-center" style="color:white; font-size: large;">
                 <th> Poster </th>
@@ -10,17 +12,35 @@
                 <th> IMDB Rating</th>
                 <th> Plot </th>
             </tr>
-            <% if (data) { %>
-                <% data.forEach((row) => { %>
-                    <tr class="text-center" style="color: white;">
-                        <td><img style="height: 200px; object-fit: scale-down;" src=<%= row.poster %> alt=Poster for <%= row.title%>></td>
-                        <td><p style="font-weight: bold"> <%= row.title %></p></td>
-                        <td><p> <%= row.release %></p></td>
-                        <td><p> <%= row.rating %></p></td>
-                        <td><p> <%= row.plot %></p></td>
-                    </tr>
-                <% }); %>
-            <% } %>
+            <% data.forEach((row) => { %>
+            <tr class="text-center" style="color: white;">
+                <td><img style="height: 200px; object-fit: scale-down;" src=<%= row.poster %> alt=Poster for <%= row.title%>></td>
+                <td><p style="font-weight: bold"> <%= row.title %></p></td>
+                <td><p> <%= row.release %></p></td>
+                <td><p> <%= row.rating %></p></td>
+                <td><p> <%= row.plot %></p></td>
+            </tr>
+            <% }); %>
         </table>
+        <div class="modal fade" id="myModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Are you sure you would like to delete all results from your search history?</h5><hr>
+                    </div>
+                    <div class="modal-body">
+                        <div class="input-group" style="width: 100%;">
+                            <form class="form-inline" method="POST" action="/delete" style="width: 50%;">
+                                <button type="submit" class="btn btn-primary" style="width: 100%; background-color: forestgreen;"> Yes </button>
+                            </form>
+                            <button type="button" class="btn btn-danger" data-dismiss="modal" style="width: 50%; background-color: firebrick;"> No </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } else { %>
+        <p class="text-center pt-2" style="color: white; font-weight: bold; font-size: xx-large;"> Looks like you haven't searched for anything yet... </p> 
+        <% } %>
     </div>
 <%- include('../partials/footer') %>

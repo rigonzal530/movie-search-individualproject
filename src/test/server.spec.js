@@ -22,8 +22,8 @@ describe("Server!", () => {
       });
   });
 
-  // negative test case for "/add" where the date is wrong
-  it("Renders the home page without issues", (done) =>
+  // negative test case for "/add" where the date is the wrong format
+  it("Doesn't add a movie with an invalid date type", (done) =>
   {
     const movie =
     {
@@ -37,9 +37,10 @@ describe("Server!", () => {
     chai
       .request(server)
       .post("/add")
+      .send(movie)
       .end((err, res) =>
       {
-        expect(res).to.have.status(200);
+        expect(res).to.have.status(404);
         done();
       });
   });

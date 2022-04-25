@@ -2,10 +2,12 @@ function getMovieData()
 {
     // "userSearch" is pulled from the text entered into the search box on the navbar
     const userSearch = document.getElementById("search_input").value;
-    // checks if a search term wasn't entered. prints an error message and exits the function if true 
+    const feedback = document.getElementById("user_feedback");
+    // checks if a search term wasn't entered. prints an error message to the user and exits the function if true 
     if (userSearch == "")
     {
-        console.log("No search term was entered.");
+        feedback.innerHTML = "No search term was entered.";
+        feedback.style.color = "red";
         return;
     }
 
@@ -17,12 +19,12 @@ function getMovieData()
     // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format
     if (userSearch.match(imdbIDRegex))
     {
-        url += `i=${userSearch}`;
+        url += "i=" + userSearch;
     }
     // else "userSearch" wasn't an IMDB id, so it's a title. appends "userSearch" to "url" with the Title format
     else
     {
-        url += `t=${userSearch}`;
+        url += "t=" + userSearch;
     }
 
     // performs an AJAX call to the OMDb API with "url"
@@ -31,13 +33,14 @@ function getMovieData()
         dataType:"json"
     }).then(data =>
         {
-            console.log(data);
             const insertLocation = document.getElementById("card_container");
             insertLocation.innerHTML = "";
+            feedback.innerHTML = "";
             // appends an error message to the page and exits the function if the API call was unsuccessful
             if (data.Response == "False")
             {
-                insertLocation.innerHTML = `<p class='text-center' style='color: red; font-size: xx-large; font-weight: bolder;'>${data.Error}</p>`
+                feedback.innerHTML = data.Error;
+                feedback.style.color = "red";
                 return;
             }
             // else appends a card containing the movie's data to the page
@@ -130,11 +133,28 @@ function searchModal()
     var release = document.getElementById("movieRelease").name;
     var rating = document.getElementById("movieRating").name;
     var plot = document.getElementById("moviePlot").name;
-    var successMessage = `<p class="text-center" style="color: forestgreen; font-weight: bold; font-size: xx-large;"> Successfully added ${title} to your search history! </p>`;
+
+    // deciding what to display to the user on successful AJAX calls
+    var feedback = document.getElementById("user_feedback");
+    var feedbackMessage = "";
+    // checks if the feedback div is empty, which is true when a movie card is first displayed to the user
+    if (feedback.innerHTML == "")
+    {
+        // gives the user a successful feedback message when the AJAX call from "Add Search Result" is performed the first time
+        // normally this means the user hasn't added this movie yet, but a case exists where the user searches for a previously added movie and this feedback is false
+        feedback.style.color = "forestgreen";
+        feedbackMessage = `Successfully added ${title} to your search history!`;
+    }
+    // else the feedback div already contains a success message, so an error message should be displayed if the modal's "Yes" is clicked again
+    else
+    {
+        feedback.style.color = "red";
+        feedbackMessage = `${title} was already added to your search history! It wasn't added again.`;
+    }
     // replacing single quotes with TWO single quotes so that the postgreSQL query doesn't throw a fit
     var singleQuote = /'/gm;
-    if(title.match(singleQuote)) { title = title.replace("'", "''");}
-    if(plot.match(singleQuote)) { plot = plot.replace("'", "''"); }
+    if(title.match(singleQuote)) { title = title.replaceAll("'", "''");}
+    if(plot.match(singleQuote)) { plot = plot.replaceAll("'", "''"); }
 
     // performing an AJAX call to pass the data to the "/add" API
     $.ajax({
@@ -149,6 +169,6 @@ function searchModal()
             rating: rating,
             plot: plot
         },
-        success: $('#card_container').prepend(successMessage)
+        success: $('#user_feedback').html(feedbackMessage)
     });
 }
