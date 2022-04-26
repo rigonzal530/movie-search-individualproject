@@ -19,12 +19,12 @@ function getMovieData()
     // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format
     if (userSearch.match(imdbIDRegex))
     {
-        url += "i=" + userSearch;
+        url += `i=${userSearch}`;
     }
     // else "userSearch" wasn't an IMDB id, so it's a title. appends "userSearch" to "url" with the Title format
     else
     {
-        url += "t=" + userSearch;
+        url += `t=${userSearch}`;
     }
 
     // performs an AJAX call to the OMDb API with "url"
