@@ -10,20 +10,22 @@ const app = express();
 const bodyParser = require('body-parser'); //Ensure our body-parser tool has been added
 app.use(bodyParser.json());              // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
+require('dotenv').config(); // ensures environment variables are available before continuing
 
 //Create Database Connection
 const pgp = require('pg-promise')();
 const isProduction = process.env.NODE_ENV === 'production';
 const dbConfig = {
     connectionString: process.env.DATABASE_URL,
-    ssl: isProduction ? {rejectUnauthorized: false } : false
+    ssl: isProduction ? { rejectUnauthorized: false } : false
 };
 const db = pgp(dbConfig);
 
 // set the view engine to ejs
+const path = require('path');
 app.set('view engine', 'ejs');
-app.set('views', __dirname + '/views');
-app.use(express.static(__dirname + '/'));//This line is necessary for us to use relative paths and access our resources directory
+app.set('views', path.join(__dirname, 'src', 'views'));
+app.use(express.static(path.join(__dirname, 'src')));//This line is necessary for us to use relative paths and access our resources directory
 
 // renders the home page
 app.get('/', (req, res) =>
