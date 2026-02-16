@@ -1,6 +1,6 @@
 # Movie Search - Software Dev Method & Tools Individual Project
- A full-stack project that utilized the IMDB API to allow users to search for a movie by title or IMDB ID and display information on it (like release date, synopsis, rating). They could then save it to a list as search history, which could be could then be deleted.
- Although no longer available, the website was originally deployed on Heroku when PostgreSQL storage was free.
+ A full-stack project that utilizes the OMDB API to allow users to search for a movie by title or IMDB ID and display information on it (like release date, synopsis, rating) and perform CRUD operations to save it to a list.
+ Originally hosted on Heroku, this webapp is now deployed via Railway here: https://movie-search-individualproject-production.up.railway.app/
 
 
 ## Techologies used
