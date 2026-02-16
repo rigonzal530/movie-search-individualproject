@@ -25,7 +25,7 @@ const db = pgp(dbConfig);
 const path = require('path');
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src', 'views'));
-app.use(express.static(path.join(__dirname, 'src')));//This line is necessary for us to use relative paths and access our resources directory
+app.use(express.static(path.join(__dirname, 'src', 'public')));//This line is necessary for us to use relative paths and access our resources directory from web root "/"
 
 // renders the home page
 app.get('/', (req, res) =>
@@ -57,6 +57,37 @@ app.get('/searches', (req, res) =>
     })
 });
 
+// route created to remove direct OMBD API calls from the frontend
+app.get('/api/movie', async (req, res) => 
+{
+    const userSearch = req.query.search?.trim();
+    if (!userSearch) {
+        return res.status(400).json({ error: "No search term entered." });
+    }
+
+    // creates the url that will be used to call the OMDb API
+    let url = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}&`;
+    // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
+    const imdbIDRegex = /[t]{2}\d{7,}/;
+
+    // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format, otherwise uses Title format
+    if (userSearch.match(imdbIDRegex)) {
+        url += `i=${userSearch}`;
+    }
+    else {
+        url += `t=${userSearch}`;
+    }
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: "Server error while fetching movie data." });
+    }
+});
+
 // adds the searched movie's data to the database
 app.post('/add', (req, res) =>
 {
@@ -81,7 +112,7 @@ app.post('/add', (req, res) =>
         res.status(404).send();
         console.log("error: ", err);
     });
-})
+});
 
 // deletes all records in the movies table
 app.post('/delete', (req, res) =>
@@ -108,7 +139,7 @@ app.post('/delete', (req, res) =>
         });
         console.log("error: ", err);
     });
-})
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

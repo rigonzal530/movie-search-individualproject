@@ -21,7 +21,7 @@
     },
     "scripts": {
         "test": "mocha 'src/test/*.js'",
-        "start": "nodemode server.js -L",
+        "start": "node server.js",
         "dev": "nodemon server.js -L",
         "testandrun": "npm-run-all test dev"
     }

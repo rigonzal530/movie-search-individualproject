@@ -1,35 +1,19 @@
 function getMovieData()
 {
     // "userSearch" is pulled from the text entered into the search box on the navbar
-    const userSearch = document.getElementById("search_input").value;
+    const userSearch = document.getElementById("search_input").value.trim();
     const feedback = document.getElementById("user_feedback");
-    // checks if a search term wasn't entered. prints an error message to the user and exits the function if true 
-    if (userSearch == "")
+    // checks if a search term wasn't entered. prints an error message to the user and exits the function without calling the server
+    if (!userSearch)
     {
         feedback.innerHTML = "No search term was entered.";
         feedback.style.color = "red";
         return;
     }
 
-    // creates the url that will be used to call the OMDb API
-    const apiKey = "42b47cce";
-    var url = `http://www.omdbapi.com/?apikey=${apiKey}&`;
-    // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
-    var imdbIDRegex = /[t]{2}\d{7,}/;
-    // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format
-    if (userSearch.match(imdbIDRegex))
-    {
-        url += `i=${userSearch}`;
-    }
-    // else "userSearch" wasn't an IMDB id, so it's a title. appends "userSearch" to "url" with the Title format
-    else
-    {
-        url += `t=${userSearch}`;
-    }
-
-    // performs an AJAX call to the OMDb API with "url"
+    // performs an AJAX call to the OMDb API through a predefined server route "api/movies"
     $.ajax({
-        url:url,
+        url:`/api/movie?search=${encodeURIComponent(userSearch)}`,
         dataType:"json"
     }).then(data =>
         {
