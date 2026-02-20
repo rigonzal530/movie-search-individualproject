@@ -2,15 +2,13 @@
   Load Components!
 
   Express      - A Node.js Framework
-  Body-Parser  - A tool to help use parse the data in a post request
   Pg-Promise   - A database tool to help use connect to our PostgreSQL database
 ***********************/
-const express = require('express'); //Ensure our express framework has been added
+const express = require('express');                 // Ensure our express framework has been added
 const app = express();
-const bodyParser = require('body-parser'); //Ensure our body-parser tool has been added
-app.use(bodyParser.json());              // support json encoded bodies
-app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
-require('dotenv').config(); // ensures environment variables are available before continuing
+app.use(express.json());                            // support json encoded bodies
+app.use(express.urlencoded({ extended: true }));    // support encoded bodies
+require('dotenv').config();                         // ensures environment variables are available before continuing
 
 //Create Database Connection
 const pgp = require('pg-promise')();
