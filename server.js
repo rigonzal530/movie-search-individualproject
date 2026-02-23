@@ -1,26 +1,12 @@
-/***********************
-  Load Components!
-
-  Express      - A Node.js Framework
-  Pg-Promise   - A database tool to help use connect to our PostgreSQL database
-***********************/
+require('dotenv').config();                         // ensures environment variables are available before continuing
+const path = require('path');
 const express = require('express');                 // Ensure our express framework has been added
+
 const app = express();
 app.use(express.json());                            // support json encoded bodies
 app.use(express.urlencoded({ extended: true }));    // support encoded bodies
-require('dotenv').config();                         // ensures environment variables are available before continuing
-
-//Create Database Connection
-const pgp = require('pg-promise')();
-const isProduction = process.env.NODE_ENV === 'production';
-const dbConfig = {
-    connectionString: process.env.DATABASE_URL,
-    ssl: isProduction ? { rejectUnauthorized: false } : false
-};
-const db = pgp(dbConfig);
 
 // set the view engine to ejs
-const path = require('path');
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src', 'views'));
 app.use(express.static(path.join(__dirname, 'src', 'public')));//This line is necessary for us to use relative paths and access our resources directory from web root "/"

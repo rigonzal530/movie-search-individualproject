@@ -29,4 +29,8 @@ async function register(email, password) {
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     return usersData.createUser(normalizedEmail, hashedPassword);
-}
+};
+
+module.exports = {
+    register
+};
