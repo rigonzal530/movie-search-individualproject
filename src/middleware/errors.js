@@ -22,6 +22,6 @@ function errorHandler(err, req, res, next) {
             timestamp: new Date().toISOString()
         });
     }
-}
+};
 
 module.exports = errorHandler;
