@@ -1,110 +1,70 @@
-const usersData = require('../data/movies.data');
+const moviesData = require('../data/movies.data');
 const BusinessLogicError = require('../errors/BusinessLogicError');
 
-// // renders the search history page, which displays all saved movies data in a table
-// app.get('/', (req, res) =>
-// {
-//     var getMovies = "SELECT * FROM movies;";
-//     db.any(getMovies)
-//     .then((data) =>
-//     {
-//         res.render('pages/searches',
-//         {
-//             myTitle: "Search History",
-//             data: data
-//         });
-//     })
-//     .catch((err) =>
-//     {
-//         console.log("error: ", err);
-//         res.render('pages/searches',
-//         {
-//             myTitle: "Search History",
-//             data: null
-//         });
-//     })
-// });
+async function getUserMovies(userId) {
+    return moviesData.getMovies(userId);
+};
 
-// // adds the searched movie's data to the database
-// app.post('/save', (req, res) =>
-// {
-//     // sets all the variables to the variables passed in from the AJAX call's json
-//     const poster = req.body.poster;
-//     const title = req.body.title;
-//     const releaseDate = req.body.release;
-//     const rating = req.body.rating;
-//     const plot = req.body.plot;
-//     // this query prevents duplicates from being added, but "data" has no way to distinguish whether ON CONFLICT was used or not
-//     // consequently, the feedback for attempting to add a duplicate is dealt with in script.js
-//     var insertMovie = `INSERT INTO movies(poster, title, release, rating, plot) VALUES('${poster}', '${title}', '${releaseDate}', ${rating}, '${plot}') ON CONFLICT (title) DO NOTHING;`;
+async function saveMovie(userId, movieDetails) {
+    const savedMovie = await moviesData.createMovie(userId, movieDetails);
+    
+    return {
+        movieId: savedMovie.movieId,
+        alreadyExisted: !savedMovie.wasInserted
+    };
+};
 
-//     // writes the "insertMovie" query to the database
-//     db.any(insertMovie)
-//     .then((data) =>
-//     {
-//         res.status(201).send();
-//     })
-//     .catch((err) => 
-//     {
-//         res.status(404).send();
-//         console.log("error: ", err);
-//     });
-// });
+async function deleteMovie(userId, movieId) {
+    return moviesData.deleteMovie(userId, movieId);
+};
 
-// // deletes all records in the movies table
-// app.post('/delete-all', (req, res) =>
-// {
-//     // query to remove all rows from the movies table
-//     var deleteAll = "DELETE FROM movies;";
+async function deleteAllMovies(userId) {
+    return moviesData.deleteAllMovies(userId);
+};
 
-//     // writes the "deleteAll" query to the database
-//     db.any(deleteAll)
-//     .then((data) =>
-//     {
-//         res.render('pages/searches',
-//         {
-//             myTitle: "Search History",
-//             data: data
-//         });
-//     })
-//     .catch((err) => 
-//     {
-//         res.render('pages/searches',
-//         {
-//             myTitle: "Search History",
-//             data: null
-//         });
-//         console.log("error: ", err);
-//     });
-// });
+async function searchMovie(userSearch) {
+    let omdbApiCall = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}&`;
 
-// // route created to remove direct OMBD API calls from the frontend
-// app.get('/omdb-info', async (req, res) => 
-// {
-//     const userSearch = req.query.search?.trim();
-//     if (!userSearch) {
-//         return res.status(400).json({ error: "No search term entered." });
-//     }
+    // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
+    const imdbIDRegex = /^tt\d{7,}$/;
 
-//     // creates the url that will be used to call the OMDb API
-//     let url = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}&`;
-//     // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
-//     const imdbIDRegex = /[t]{2}\d{7,}/;
+    // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format, otherwise uses Title format
+    if (userSearch.match(imdbIDRegex)) {
+        omdbApiCall += `i=${userSearch}`;
+    }
+    else {
+        omdbApiCall += `t=${encodeURIComponent(userSearch)}`;
+    }
 
-//     // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format, otherwise uses Title format
-//     if (userSearch.match(imdbIDRegex)) {
-//         url += `i=${userSearch}`;
-//     }
-//     else {
-//         url += `t=${userSearch}`;
-//     }
+    try {
+        const response = await fetch(omdbApiCall);
+        if (!response.ok) {
+            // if fetching from OMDB fails for any reason, throw an error
+            throw new BusinessLogicError("OMDb service unavailable", 'EXTERNAL_API_ERROR', 502);
+        }
 
-//     try {
-//         const response = await fetch(url);
-//         const data = await response.json();
-//         res.json(data);
-//     }
-//     catch (err) {
-//         res.status(500).json({ error: "Server error while fetching movie data." });
-//     }
-// });
+        const data = await response.json();
+        if (data.Response === 'False') {
+            // when given incorrect input, the OMDb API returns Response: "False" and Error: "Movie not found!"
+            throw new BusinessLogicError(data.Error || 'Movie not found', 'MOVIE_NOT_FOUND', 404);
+        }
+
+        return data;
+    }
+    catch (err) {
+        // ensures errors from the try block are passed along to the error handler
+        if (err instanceof BusinessLogicError) {
+            throw err;
+        }
+        // otherwise something unaccounted for went wrong when fetching data from OMDb
+        throw new BusinessLogicError('Failed to fetch movie data', 'EXTERNAL_API_ERROR', 502);
+    }
+};
+
+module.exports = {
+    getUserMovies,
+    saveMovie,
+    deleteMovie,
+    deleteAllMovies,
+    searchMovie
+};
