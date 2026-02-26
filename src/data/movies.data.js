@@ -14,50 +14,84 @@ async function createMovie(userId, movieDetails) {
     // starts a transaction to attempt inserting a movie into both "movies" and "user_movies"
     return db.tx(async t => {
         const { imdbId, title, poster, release, rating, plot } = movieDetails;
-        // attempt inserting the movie, doing nothing if it already exists
-        const insertedMovie = await t.oneOrNone(
+        // attempt inserting the movie, always returning the full movie row without modifying it if already existing
+        const insertedMovie = await t.one(
             `INSERT INTO movies(imdb_id, title, poster, release, rating, plot) 
                 VALUES($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (imdb_id) DO NOTHING
-                RETURNING movie_id`,
+                ON CONFLICT (imdb_id) DO UPDATE
+                SET imdb_id = movies.imdb_id
+                RETURNING *`,
             [imdbId, title, poster, release, rating, plot]
         );
 
-        // retrieves the movie's ID from either the previous insert statement (if it didn't exist), or the existing movie's row
-        let movieId;
-        if (insertedMovie) {
-            movieId = insertedMovie.movie_id;
-        }
-        else {
-            const existingMovie = await t.one(
-                `SELECT movie_id FROM movies WHERE imdb_id = $1`,
-                [imdbId]
-            );
-            movieId = existingMovie.movie_id;
-        }
-
-        // attempts inserting to user_movies, returning null if already existing
+        // attempts inserting to user_movies, returning null (or false as a boolean) if already existing
         const insertedUserMovie = await t.oneOrNone(
             `INSERT INTO user_movies(user_id, movie_id)
                 VALUES($1, $2)
                 ON CONFLICT (user_id, movie_id) DO NOTHING
                 RETURNING user_id`,
-            [userId, movieId]
+            [userId, insertedMovie.movie_id]
         );
 
-        // returns movieId and a boolean determining whether the movie was added to user_movies
+        // returns inserted movie details (as they exist in the movies table) and a boolean determining whether the movie was added to user_movies
         return {
-            movieId,
-            wasInserted: !!insertedUserMovie };
+            insertedMovie,
+            alreadyExisted: !insertedUserMovie };
     });
 };
 
 async function deleteMovie(userId, movieId) {
+    return db.tx(async t => {
+        // always delete from user_movies (idempotent if condition is unsatisfied)
+        await t.none(
+            `DELETE FROM user_movies
+                WHERE user_id = $1
+                AND movie_id = $2`,
+            [userId, movieId]
+        );
 
+        // if no users still have the movie saved, delete from the movies table too
+        const movieDeletionResult = await t.result(
+            `DELETE FROM movies m
+                WHERE m.movie_id = $1
+                AND NOT EXISTS (
+                    SELECT 1 FROM user_movies um
+                        WHERE um.movie_id = m.movie_id
+                )`,
+            [movieId]
+        );
+
+        // returns a boolean determining if the movie was deleted from the movies table as a result of user_movies deletion
+        return movieDeletionResult.rowCount > 0;
+    });
 };
 
 async function deleteAllMovies(userId) {
+    return db.tx(async t=> {
+        const deletedMovies = await t.manyOrNone(
+            `DELETE FROM user_movies
+                WHERE user_id = $1
+                RETURNING movie_id`,
+            [userId]
+        );
 
+        // no need to delete from movies table if user_movies wasn't affected
+        if (deletedMovies.length === 0) return;
+
+        // extracts all the movie IDs from deleted movies
+        const movieIds = deletedMovies.map(row => row.movie_id);
+
+        // deletes any movies that are no longer saved by any users after the current user_movies deletion
+        await t.none(
+            `DELETE FROM movies m
+                WHERE m.movie_id IN ($1:csv)
+                AND NOT EXISTS (
+                    SELECT 1 FROM user_movies um
+                        WHERE um.movie_id = m.movie_id
+                )`,
+            [movieIds]
+        );
+    });
 };
 
 module.exports = {

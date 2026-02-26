@@ -6,12 +6,7 @@ async function getUserMovies(userId) {
 };
 
 async function saveMovie(userId, movieDetails) {
-    const savedMovie = await moviesData.createMovie(userId, movieDetails);
-    
-    return {
-        movieId: savedMovie.movieId,
-        alreadyExisted: !savedMovie.wasInserted
-    };
+    return moviesData.createMovie(userId, movieDetails);
 };
 
 async function deleteMovie(userId, movieId) {
