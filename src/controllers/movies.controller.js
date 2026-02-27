@@ -6,14 +6,14 @@ async function getUserMovies(req, res, next) {
         const userMovies = await moviesService.getUserMovies(userId);
 
         res.render('pages/searches', {
-            myTitle: "Saved Movies",
+            pageTitle: "Saved Movies",
             data: userMovies
         });
     }
     catch (err) {
         next(err);
     }
-};
+}
 
 async function saveMovie(req, res, next) {
     try {
@@ -31,7 +31,7 @@ async function saveMovie(req, res, next) {
     catch (err) {
         next(err);
     }
-};
+}
 
 async function deleteMovie(req, res, next) {
     try {
@@ -45,7 +45,7 @@ async function deleteMovie(req, res, next) {
     catch (err) {
         next(err);
     }
-};
+}
 
 async function deleteAllMovies(req, res, next) {
     try {
@@ -58,7 +58,7 @@ async function deleteAllMovies(req, res, next) {
     catch (err) {
         next(err);
     }
-};
+}
 
 async function searchMovie(req, res, next) {
     try {
@@ -74,7 +74,7 @@ async function searchMovie(req, res, next) {
     catch (err) {
         next(err);
     }
-};
+}
 
 module.exports = {
     getUserMovies,

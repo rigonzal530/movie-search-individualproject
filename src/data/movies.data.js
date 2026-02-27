@@ -8,7 +8,7 @@ async function getMovies(userId) {
             ORDER BY um.created_at DESC`,
         [userId]
     );
-};
+}
 
 async function createMovie(userId, movieDetails) {
     // starts a transaction to attempt inserting a movie into both "movies" and "user_movies"
@@ -38,7 +38,7 @@ async function createMovie(userId, movieDetails) {
             insertedMovie,
             alreadyExisted: !insertedUserMovie };
     });
-};
+}
 
 async function deleteMovie(userId, movieId) {
     return db.tx(async t => {
@@ -64,7 +64,7 @@ async function deleteMovie(userId, movieId) {
         // returns a boolean determining if the movie was deleted from the movies table as a result of user_movies deletion
         return movieDeletionResult.rowCount > 0;
     });
-};
+}
 
 async function deleteAllMovies(userId) {
     return db.tx(async t=> {
@@ -92,7 +92,7 @@ async function deleteAllMovies(userId) {
             [movieIds]
         );
     });
-};
+}
 
 module.exports = {
     getMovies,

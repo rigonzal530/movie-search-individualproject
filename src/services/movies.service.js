@@ -3,19 +3,19 @@ const BusinessLogicError = require('../errors/BusinessLogicError');
 
 async function getUserMovies(userId) {
     return moviesData.getMovies(userId);
-};
+}
 
 async function saveMovie(userId, movieDetails) {
     return moviesData.createMovie(userId, movieDetails);
-};
+}
 
 async function deleteMovie(userId, movieId) {
     return moviesData.deleteMovie(userId, movieId);
-};
+}
 
 async function deleteAllMovies(userId) {
     return moviesData.deleteAllMovies(userId);
-};
+}
 
 async function searchMovie(userSearch) {
     let omdbApiCall = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}&`;
@@ -54,7 +54,7 @@ async function searchMovie(userSearch) {
         // otherwise something unaccounted for went wrong when fetching data from OMDb
         throw new BusinessLogicError('Failed to fetch movie data', 'EXTERNAL_API_ERROR', 502);
     }
-};
+}
 
 module.exports = {
     getUserMovies,

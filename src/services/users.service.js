@@ -29,8 +29,29 @@ async function register(email, password) {
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     return usersData.createUser(normalizedEmail, hashedPassword);
-};
+}
+
+async function login(email, password) {
+    if (!email || !password) {
+        throw new BusinessLogicError('Email and password are required', 'MISSING_CREDENTIALS', 400);
+    }
+
+    // normalizes email before checking for a user in the database
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await usersData.findByEmail(normalizedEmail);
+    if (!user) {
+        throw new BusinessLogicError('Invalid email or password', 'INVALID_CREDENTIALS', 401);
+    }
+
+    const matchingPassword = await bcrypt.compare(password, user.password);
+    if (!matchingPassword) {
+        throw new BusinessLogicError('Invalid email or password', 'INVALID_CREDENTIALS', 401);
+    }
+
+    return user.user_id;
+}
 
 module.exports = {
-    register
+    register,
+    login
 };
