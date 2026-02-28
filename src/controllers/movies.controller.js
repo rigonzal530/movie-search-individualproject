@@ -2,7 +2,7 @@ const moviesService = require('../services/movies.service');
 
 async function getUserMovies(req, res, next) {
     try {
-        const userId = req.user.id;
+        const userId = req.session.userId;
         const userMovies = await moviesService.getUserMovies(userId);
 
         res.render('pages/searches', {
@@ -17,7 +17,7 @@ async function getUserMovies(req, res, next) {
 
 async function saveMovie(req, res, next) {
     try {
-        const userId = req.user.id;
+        const userId = req.session.userId;
         const movieDetails = req.body; // contains a json containing poster, title, releaseDate, rating, and plot from the AJAX call in script.js
 
         const savedMovie = await moviesService.saveMovie(userId, movieDetails);
@@ -35,7 +35,7 @@ async function saveMovie(req, res, next) {
 
 async function deleteMovie(req, res, next) {
     try {
-        const userId = req.user.id;
+        const userId = req.session.userId;
         const movieId = req.params.movieId;
 
         await moviesService.deleteMovie(userId, movieId);
@@ -49,7 +49,7 @@ async function deleteMovie(req, res, next) {
 
 async function deleteAllMovies(req, res, next) {
     try {
-        const userId = req.user.id;
+        const userId = req.session.userId;
 
         await moviesService.deleteAllMovies(userId);
 

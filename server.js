@@ -10,10 +10,15 @@ const db = require('./src/db/connection')
 const userRoutes = require('./src/routes/users.routes');
 const movieRoutes = require('./src/routes/movies.routes');
 const errorHandler = require('./src/middleware/errors');
+const viewUser = require('./src/middleware/viewUser');
 
 const app = express();
 
-// set the view engine to ejs
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction) {
+    app.set('trust proxy', 1);
+}
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'src', 'views'));
 
@@ -22,20 +27,24 @@ app.use(express.urlencoded({ extended: true }));    // support encoded bodies
 app.use(express.static(path.join(__dirname, 'src', 'public'))); // necessary for us access our public resources directory
 
 app.use(session({
+    name: 'movie_search_session',
     store: new pgSession({
         pgPromise: db,
-        tableName: 'user_sessions'
+        tableName: 'user_sessions',
+        createTableIfMissing: true
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
+        sameSite: 'lax',
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
     }
 }))
 
+app.use(viewUser); // allows logged in user's details to be used within EJS templates
 app.use('/', userRoutes);
 app.use('/movies', movieRoutes);
 
