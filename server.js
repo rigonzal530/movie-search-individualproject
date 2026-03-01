@@ -2,6 +2,7 @@
 require('dotenv').config();         // ensures environment variables are available before continuing
 const path = require('path');       // ensures node.js path module is loaded for cross-platform path support
 const express = require('express'); // ensures express framework has been added
+const expressLayouts = require('express-ejs-layouts');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 
@@ -20,11 +21,13 @@ if (isProduction) {
 }
 
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'src', 'views'));
+app.set('views', path.join(__dirname, 'src', 'views')); // sets the directory where EJS templates are located
+app.set('layout', 'layout'); // sets the default layout for all views to be rendered within layout.ejs
 
 app.use(express.json());                            // support json encoded bodies
 app.use(express.urlencoded({ extended: true }));    // support encoded bodies
 app.use(express.static(path.join(__dirname, 'src', 'public'))); // necessary for us access our public resources directory
+app.use(expressLayouts);
 
 app.use(session({
     name: 'movie_search_session',

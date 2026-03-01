@@ -13,7 +13,7 @@ function getMovieData()
 
     // performs an AJAX call to the OMDb API through a predefined server route "api/movies"
     $.ajax({
-        url:`/api/movie?search=${encodeURIComponent(userSearch)}`,
+        url:`/movie/search?search=${encodeURIComponent(userSearch)}`,
         dataType:"json"
     }).then(data =>
         {
