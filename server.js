@@ -10,6 +10,8 @@ const pgSession = require('connect-pg-simple')(session);
 const db = require('./src/db/connection')
 const userRoutes = require('./src/routes/users.routes');
 const movieRoutes = require('./src/routes/movies.routes');
+const userApiRoutes = require('./src/routes/users.api.routes');
+const movieApiRoutes = require('./src/routes/movies.api.routes');
 const errorHandler = require('./src/middleware/errors');
 const viewUser = require('./src/middleware/viewUser');
 
@@ -50,6 +52,8 @@ app.use(session({
 app.use(viewUser); // allows logged in user's details to be used within EJS templates
 app.use('/', userRoutes);
 app.use('/movies', movieRoutes);
+app.use('/api/users', userApiRoutes);
+app.use('/api/movies', movieApiRoutes);
 
 // renders the home page
 app.get('/', (req, res) => {

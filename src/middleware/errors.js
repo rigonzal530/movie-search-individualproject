@@ -25,10 +25,11 @@ function errorHandler(err, req, res, next) {
         }
     }
 
-    if (req.accepts('html')) {
-        return res.status(statusCode).render('pages/error', errorDetails);
+    if (req.path.startsWith('/api/')) {
+        return res.status(statusCode).json(errorDetails);
     }
-    return res.status(statusCode).json(errorDetails);
+    
+    return res.status(statusCode).render('pages/error', errorDetails);
 };
 
 module.exports = errorHandler;
