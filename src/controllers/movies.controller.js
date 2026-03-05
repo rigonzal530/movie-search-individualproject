@@ -1,3 +1,4 @@
+const BusinessLogicError = require('../errors/BusinessLogicError');
 const moviesService = require('../services/movies.service');
 
 async function getUserMovies(req, res, next) {
@@ -60,16 +61,35 @@ async function deleteAllMovies(req, res, next) {
     }
 }
 
-async function searchMovie(req, res, next) {
+async function searchMovies(req, res, next) {
     try {
         const userSearch = req.query.search?.trim();
+        const resultsPage = Math.max(1, parseInt(req.query.page, 10) || 1); // default to page 1 if not provided or invalid
         if (!userSearch) {
-            return res.status(400).json({ error: 'Search term required' });
+            throw new BusinessLogicError('Search term required', 'INVALID_INPUT', 400);
         }
 
-        const movieData = await moviesService.searchMovie(userSearch);
+        const searchResults = await moviesService.searchMovies(userSearch, resultsPage);
 
-        res.json(movieData);
+        res.json(searchResults);
+    }
+    catch (err) {
+        next(err);
+    }
+}
+
+async function searchMovieDetails(req, res, next) {
+    try {
+        // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
+        const imdbIDRegex = /^tt\d{7,}$/;
+        const imdbId = req.params.movieId;
+        if (!imdbIDRegex.test(imdbId)) {
+            throw new BusinessLogicError('Invalid IMDb ID', 'INVALID_INPUT', 400);
+        }
+        
+        const movieDetails = await moviesService.searchMovieDetails(imdbId);
+
+        res.json(movieDetails);
     }
     catch (err) {
         next(err);
@@ -81,5 +101,6 @@ module.exports = {
     saveMovie,
     deleteMovie,
     deleteAllMovies,
-    searchMovie
+    searchMovies,
+    searchMovieDetails
 };

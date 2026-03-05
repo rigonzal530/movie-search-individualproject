@@ -10,6 +10,14 @@ async function getMovies(userId) {
     );
 }
 
+async function findByImdbId(imdbId) {
+    return db.oneOrNone(
+        `SELECT * FROM movies
+            WHERE imdb_id = $1`,
+        [imdbId]
+    );
+}
+
 async function createMovie(userId, movieDetails) {
     // starts a transaction to attempt inserting a movie into both "movies" and "user_movies"
     return db.tx(async t => {
@@ -96,6 +104,7 @@ async function deleteAllMovies(userId) {
 
 module.exports = {
     getMovies,
+    findByImdbId,
     createMovie,
     deleteMovie,
     deleteAllMovies

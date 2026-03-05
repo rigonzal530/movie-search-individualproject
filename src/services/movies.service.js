@@ -1,5 +1,6 @@
 const moviesData = require('../data/movies.data');
 const BusinessLogicError = require('../errors/BusinessLogicError');
+const OMDB_BASE_URL = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}`;
 
 async function getUserMovies(userId) {
     return moviesData.getMovies(userId);
@@ -17,22 +18,38 @@ async function deleteAllMovies(userId) {
     return moviesData.deleteAllMovies(userId);
 }
 
-async function searchMovie(userSearch) {
-    let omdbApiCall = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}&`;
+async function searchMovies(userSearch, resultsPage) {
+    const url = `${OMDB_BASE_URL}&s=${encodeURIComponent(userSearch)}&page=${resultsPage}`;
+    const data = await fetchFromOMDB(url);
 
-    // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
-    const imdbIDRegex = /^tt\d{7,}$/;
+    return {
+        results: data.Search,
+        totalResults: parseInt(data.totalResults, 10)
+    };
+}
 
-    // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format, otherwise uses Title format
-    if (userSearch.match(imdbIDRegex)) {
-        omdbApiCall += `i=${userSearch}`;
+async function searchMovieDetails(imdbId) {
+    const cachedMovie = await moviesData.findByImdbId(imdbId);
+    if (cachedMovie) {
+        return {
+            imdbID: cachedMovie.imdb_id,
+            Title: cachedMovie.title,
+            Poster: cachedMovie.poster,
+            Released: cachedMovie.release,
+            imdbRating: cachedMovie.rating,
+            Plot: cachedMovie.plot
+        };
     }
-    else {
-        omdbApiCall += `t=${encodeURIComponent(userSearch)}`;
-    }
 
+    const url = `${OMDB_BASE_URL}&i=${encodeURIComponent(imdbId)}`;
+    const data = await fetchFromOMDB(url);
+
+    return data;
+}
+
+async function fetchFromOMDB(url) {
     try {
-        const response = await fetch(omdbApiCall);
+        const response = await fetch(url);
         if (!response.ok) {
             // if fetching from OMDB fails for any reason, throw an error
             throw new BusinessLogicError("OMDb service unavailable", 'EXTERNAL_API_ERROR', 502);
@@ -61,5 +78,6 @@ module.exports = {
     saveMovie,
     deleteMovie,
     deleteAllMovies,
-    searchMovie
+    searchMovies,
+    searchMovieDetails
 };
