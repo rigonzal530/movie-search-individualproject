@@ -64,7 +64,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`${PORT} is the magic port`);
+    if (!isProduction) {console.log(`http://localhost:${PORT} is the magic port`);}
 });
 
 module.exports = app;

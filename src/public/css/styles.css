@@ -1,3 +1,7 @@
 .search-form {
     max-width: 600px;
 }
+
+.movie-card {
+    border-radius: 1rem;
+}

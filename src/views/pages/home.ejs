@@ -7,7 +7,7 @@
                     class="form-control"
                     type="text"
                     id="searchInput"
-                    placeholder="Search by entering a title OR IMDB ID (e.g Thor OR tt0800369)"
+                    placeholder="Search by entering a movie or series title..."
                     required
                 >
                 <button class="btn btn-light" type="submit">
@@ -22,17 +22,35 @@
 </section>
 
 <section class="py-4">
-    <div class="container" id="cardContainer">
-        <!-- Movie cards will be dynamically inserted here -->
+    <div class="container">
+        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4" id="cardContainer">
+            <!-- Movie cards will be dynamically inserted here -->
+            <!-- test card -->
+            <!-- <div class="col mb-5">
+                <div class="movie-card card h-100 border-0 shadow-lg">
+                    <img
+                    class="card-img-top"
+                    src="https://m.media-amazon.com/images/M/MV5BNjRhNGZjZjEtYTQzYS00OWUxLThjNGEtMTIwMTE2ZDFlZTZkXkEyXkFqcGc@._V1_SX300.jpg"
+                    alt="Poster for Thor">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-0 fw-bold"> Thor </h6>
+                    </div>
+                </div>
+            </div> -->
+        </div>
+    </div>
+    
+    <div class="text-center mt-4">
+        <button id="loadMore" type="button" class="btn btn-primary d-none">Load More</button>
     </div>
 </section>
 
-<div class="modal fade" id="saveSearchResultModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="movieDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
             <div class="modal-header">
-                <h5 class="modal-title">Add this result to your saved movies?</h5>
+                <h5 class="modal-title fw-bold" id="movieTitle"></h5>
                 <button
                     type="button"
                     class="btn-close"
@@ -41,7 +59,16 @@
                 </button>
             </div>
 
-            <div class="modal-body text-center">
+            <div class="modal-body">
+                <img id="moviePoster">
+                <p id="movieId"></p>
+                <p id="moviePlot"></p>
+                <p id="movieRating"></p>
+                <p id="movieRelease"></p>
+                <p class="text-center fw-bold mb-0"> Would you like to save this result? </p>
+            </div>
+            
+            <div class="modal-footer mx-auto">
                 <button id="confirmSave" type="button" class="btn btn-success me-2"> Yes </button>
                 <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal"> No </button>
             </div>
