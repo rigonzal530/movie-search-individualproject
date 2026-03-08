@@ -21,7 +21,7 @@ async function findByImdbId(imdbId) {
 async function createMovie(userId, movieDetails) {
     // starts a transaction to attempt inserting a movie into both "movies" and "user_movies"
     return db.tx(async t => {
-        const { imdbId, title, poster, release, rating, plot } = movieDetails;
+        const { imdbID, Title, Poster, Released, imdbRating, Plot } = movieDetails;
         // attempt inserting the movie, always returning the full movie row without modifying it if already existing
         const insertedMovie = await t.one(
             `INSERT INTO movies(imdb_id, title, poster, release, rating, plot) 
@@ -29,7 +29,7 @@ async function createMovie(userId, movieDetails) {
                 ON CONFLICT (imdb_id) DO UPDATE
                 SET imdb_id = movies.imdb_id
                 RETURNING *`,
-            [imdbId, title, poster, release, rating, plot]
+            [imdbID, Title, Poster, Released, imdbRating, Plot]
         );
 
         // attempts inserting to user_movies, returning null (or false as a boolean) if already existing

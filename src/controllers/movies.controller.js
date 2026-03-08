@@ -19,15 +19,16 @@ async function getUserMovies(req, res, next) {
 async function saveMovie(req, res, next) {
     try {
         const userId = req.session.userId;
-        const movieDetails = req.body; // contains a json containing poster, title, releaseDate, rating, and plot from the AJAX call in script.js
-
-        const savedMovie = await moviesService.saveMovie(userId, movieDetails);
-        
-        if (savedMovie.alreadyExisted) {
-            return res.status(200).json(savedMovie);
+        const imdbId = req.body.imdbId; // contains the IMDb ID from the AJAX call in script.js
+        const imdbIDRegex = /^tt\d{7,}$/; // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
+        if (!imdbIDRegex.test(imdbId)) {
+            throw new BusinessLogicError('Invalid IMDb ID', 'INVALID_INPUT', 400);
         }
+        
+        const movieDetails = await moviesService.searchMovieDetails(imdbId); // retrieves the movie details from the OMDb API (or the movies table cache) using the provided IMDb ID
+        const savedMovie = await moviesService.saveMovie(userId, movieDetails);
 
-        res.status(201).json(savedMovie);
+        return res.status(savedMovie.alreadyExisted ? 200 : 201).json(savedMovie);
     }
     catch (err) {
         next(err);
@@ -41,7 +42,7 @@ async function deleteMovie(req, res, next) {
 
         await moviesService.deleteMovie(userId, movieId);
 
-        res.status(204).end();
+        return res.status(204).end();
     }
     catch (err) {
         next(err);
@@ -54,7 +55,7 @@ async function deleteAllMovies(req, res, next) {
 
         await moviesService.deleteAllMovies(userId);
 
-        res.status(204).end();
+        return res.status(204).end();
     }
     catch (err) {
         next(err);
@@ -71,7 +72,7 @@ async function searchMovies(req, res, next) {
 
         const searchResults = await moviesService.searchMovies(userSearch, resultsPage);
 
-        res.json(searchResults);
+        return res.json(searchResults);
     }
     catch (err) {
         next(err);
@@ -89,7 +90,7 @@ async function searchMovieDetails(req, res, next) {
         
         const movieDetails = await moviesService.searchMovieDetails(imdbId);
 
-        res.json(movieDetails);
+        return res.json(movieDetails);
     }
     catch (err) {
         next(err);

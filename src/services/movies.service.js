@@ -56,9 +56,13 @@ async function fetchFromOMDB(url) {
         }
 
         const data = await response.json();
+
+        // when given incorrect input, the OMDb API returns Response: "False" and Error: "Movie not found!"
         if (data.Response === 'False') {
-            // when given incorrect input, the OMDb API returns Response: "False" and Error: "Movie not found!"
-            throw new BusinessLogicError(data.Error || 'Movie not found', 'MOVIE_NOT_FOUND', 404);
+            return {
+                Search: [],
+                totalResults: 0
+            };
         }
 
         return data;

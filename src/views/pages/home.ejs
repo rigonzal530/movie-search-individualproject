@@ -2,11 +2,15 @@
     <div class="container">
         
         <form id="movieSearchForm" class="search-form mx-auto">
+            <label for="userSearch" class="visually-hidden">
+                Search for a movie or series
+            </label>
+
             <div class="input-group rounded-pill overflow-hidden shadow-sm">
                 <input
                     class="form-control"
                     type="text"
-                    id="searchInput"
+                    id="userSearch"
                     placeholder="Search by entering a movie or series title..."
                     required
                 >
@@ -16,14 +20,12 @@
             </div>
         </form>
 
-        <p class="text-center text-light fw-bold fs-4 mt-4" id="userFeedback"> Enter a movie to get started </p>
-
     </div>
 </section>
 
 <section class="py-4">
     <div class="container">
-        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4" id="cardContainer">
+        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4" id="cardContainer" aria-live="polite">
             <!-- Movie cards will be dynamically inserted here -->
             <!-- test card -->
             <!-- <div class="col mb-5">
@@ -38,14 +40,16 @@
                 </div>
             </div> -->
         </div>
+
+        <p id="searchResultsFeedback" class="text-center text-body-secondary fs-2 mt-4"> Enter a movie or series title to get started </p>
     </div>
     
     <div class="text-center mt-4">
-        <button id="loadMore" type="button" class="btn btn-primary d-none">Load More</button>
+        <button id="loadMore" type="button" class="btn btn-primary d-none" aria-label="Load more movie results">Load More</button>
     </div>
 </section>
 
-<div class="modal fade" id="movieDetailsModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="movieDetailsModal" tabindex="-1" aria-labelledby="movieTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
@@ -60,17 +64,31 @@
             </div>
 
             <div class="modal-body">
-                <img id="moviePoster">
-                <p id="movieId"></p>
+                <img id="moviePoster" class="img-fluid rounded mb-3">
+
                 <p id="moviePlot"></p>
-                <p id="movieRating"></p>
-                <p id="movieRelease"></p>
+
+                <ul class="list-unstyled">
+                    <li id="movieRating"></li>
+                    <li id="movieRelease"></li>
+                </ul>
+
+                <p id="movieId" class="text-body-secondary small"></p>
+
+                <% if (currentUser) { %>
                 <p class="text-center fw-bold mb-0"> Would you like to save this result? </p>
+                <% } else {%>
+                <p class="text-center fw-bold mb-0"> Sign in to save this result </p>
+                <% } %>
             </div>
             
-            <div class="modal-footer mx-auto">
+            <div class="modal-footer justify-content-center">
+                <% if (currentUser) { %>
                 <button id="confirmSave" type="button" class="btn btn-success me-2"> Yes </button>
-                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal"> No </button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"> No </button>
+                <% } else {%>
+                <a class="btn btn-primary" href="/login" role="button"> Sign In </a>
+                <% } %>
             </div>
             
         </div>
