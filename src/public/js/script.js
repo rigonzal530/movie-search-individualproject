@@ -1,158 +1,327 @@
-function getMovieData()
-{
-    // "userSearch" is pulled from the text entered into the search box on the navbar
-    const userSearch = document.getElementById("search_input").value.trim();
-    const feedback = document.getElementById("user_feedback");
-    // checks if a search term wasn't entered. prints an error message to the user and exits the function without calling the server
-    if (!userSearch)
-    {
-        feedback.innerHTML = "No search term was entered.";
-        feedback.style.color = "red";
+/* =============== State Variables =============== */
+let selectedMovie = null;
+let totalPages = 0;
+let currentPage = 1;
+let currentSearch = "";
+let isLoading = false; // tracks if a search request is currently in progress
+let notificationTimer = null; // stores the timer ID for the user notification timeout, allowing it to be cleared if a new notification is shown before the previous one times out
+
+/* =============== DOM Cache =============== */
+let dom = {};
+
+/* =============== API Constants =============== */
+const OMDB_RESULTS_PER_PAGE = 10; // OMDb API returns 10 results per page, used to calculate total pages based on total results
+
+
+/* =============== Initialization =============== */
+document.addEventListener("DOMContentLoaded", () => {
+    // cached DOM elements
+    dom.userNotification = document.getElementById("userNotification");
+    dom.userSearch = document.getElementById("userSearch");
+    dom.cardContainer = document.getElementById("cardContainer");
+    dom.searchResultsFeedback = document.getElementById("searchResultsFeedback");
+    dom.loadMoreButton = document.getElementById("loadMore");
+    dom.confirmSaveButton = document.getElementById("confirmSave");
+
+    const movieDetailsModal = document.getElementById("movieDetailsModal");
+    if (movieDetailsModal) {
+        dom.movieModal = new bootstrap.Modal(movieDetailsModal);
+        dom.movieModalElements = {
+            title: document.getElementById("movieTitle"),
+            poster: document.getElementById("moviePoster"),
+            release: document.getElementById("movieRelease"),
+            plot: document.getElementById("moviePlot"),
+            rating: document.getElementById("movieRating"),
+            id: document.getElementById("movieId")
+        };
+    }
+
+    // event listeners
+    const searchForm = document.getElementById("movieSearchForm");
+    if (searchForm) {
+        searchForm.addEventListener("submit", handleSearchSubmit);
+    }
+
+    if (dom.cardContainer) {
+        dom.cardContainer.addEventListener("click", handleCardClick);
+    }
+
+    if (dom.confirmSaveButton) {
+        dom.confirmSaveButton.addEventListener("click", handleConfirmSave);
+    }
+
+    if (dom.loadMoreButton) {
+        dom.loadMoreButton.addEventListener("click", handleLoadMore);
+    }
+
+});
+
+/* =============== Event Handlers =============== */
+function handleSearchSubmit(event) {
+    event.preventDefault();
+    startNewSearch();
+}
+
+function handleCardClick(event) {
+    const card = event.target.closest(".movie-card");
+
+    if (!card) return;
+
+    const imdbId = card.dataset.imdbId; // each card has a data-imdb-id attribute with the movie's IMDb ID when created
+    openMovieDetailsModal(imdbId);
+}
+
+function handleConfirmSave() {
+    saveSelectedMovie();
+}
+
+function handleLoadMore() {
+    getNextPage();
+}
+
+/* =============== Controllers =============== */
+async function startNewSearch() {
+    if (!dom.userSearch || !dom.cardContainer) return; // ensure necessary DOM elements are cached before trying to access them
+    if (isLoading) return; // prevent starting a new search while one is already in progress
+
+    const userSearch = dom.userSearch.value.trim();
+    const cardContainer = dom.cardContainer;
+
+    if (!userSearch) return; // prevent searching with an empty query
+
+    // resets state when a new search is performed
+    selectedMovie = null; 
+    currentPage = 1;
+    currentSearch = userSearch;
+    totalPages = 0;
+    cardContainer.innerHTML = "";
+
+    await getNextPage();
+}
+
+async function getNextPage() {
+    if (isLoading) return;
+    if (!currentSearch) return;
+    if (currentPage > totalPages && totalPages !== 0) return;
+
+    isLoading = true; // set loading state to prevent multiple requests
+    updateLoadMoreButton();
+    
+    try {
+        const data = await fetchMovieSearchResults(currentSearch, currentPage);
+
+        if (totalPages === 0) {
+            totalPages = Math.ceil((data.totalResults || 0) / OMDB_RESULTS_PER_PAGE); // calculate total pages based on total results
+        }
+
+        renderMovies(data.results);
+        currentPage++; 
+    }
+    catch (error) {
+        console.log("Network error:", error);
+        showNotification("Unable to connect. Please check your network connection and try again.", "warning", 6000);
+    }
+    finally {
+        isLoading = false; // reset loading state after request completes
+        updateLoadMoreButton();
+    }
+}
+
+async function openMovieDetailsModal(imdbId) {
+    try {
+        const movieDetails = await fetchMovieDetails(imdbId);
+        selectedMovie = movieDetails; // store the selected movie's data in the global variable
+
+        renderMovieDetails(movieDetails);
+    }
+    catch (error) {
+        console.log("Error fetching movie details:", error);
+        showNotification("Unable to fetch movie details. Please try again later.", "warning", 6000);
+    }
+}
+
+async function saveSelectedMovie() {
+    if (!dom.confirmSaveButton || !dom.movieModal) return; // ensure the confirm save button and movie modal are cached before trying to access them
+    if (!selectedMovie) return; // ensure there's a selected movie to save
+    
+    const movieModal = dom.movieModal;
+    const confirmSaveButton = dom.confirmSaveButton;
+    confirmSaveButton.disabled = true; // disable the save button to prevent multiple clicks while the save is in progress
+
+    try {
+        const savedMovie = await saveMovie(selectedMovie.imdbID);
+        if (savedMovie.alreadyExisted) {
+            showNotification(`${selectedMovie.Title} is already in your collection!`, "warning");
+        }
+        else {
+            showNotification(`${selectedMovie.Title} saved to your collection!`, "success");
+        }
+
+        movieModal.hide(); // close the modal after saving
+        selectedMovie = null; // reset selected movie after saving
+    }
+    catch (error) {
+        console.log("Error saving movie:", error);
+        showNotification("Unable to save movie. Please try again later.", "warning", 6000);
+    }
+    finally {
+        confirmSaveButton.disabled = false; // re-enable the save button after the save attempt completes
+    }
+}
+
+/* =============== API Calls =============== */
+async function fetchMovieSearchResults(search, page) {
+    const response = await fetch(`/api/movies/search?search=${encodeURIComponent(search)}&page=${page}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "OMDb API request failed");
+    }
+
+    return data;
+}
+
+async function fetchMovieDetails(imdbId) {
+    const response = await fetch(`/api/movies/${encodeURIComponent(imdbId)}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch movie details");
+    }
+
+    return data;
+}
+
+async function saveMovie(imdbId) {
+    const response = await fetch(`/api/movies/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            imdbId: imdbId
+        })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Failed to save movie");
+    }
+
+    return data;
+}
+
+/* =============== Rendering =============== */
+function renderMovies(movies) {
+    if (!dom.cardContainer || !dom.searchResultsFeedback) return;
+
+    const cardContainer = dom.cardContainer;
+    const searchResultsFeedback = dom.searchResultsFeedback;
+
+    if (!movies || (movies.length === 0 && currentPage === 1)) {
+        searchResultsFeedback.textContent = "No results found. Try searching for another title.";
+        searchResultsFeedback.classList.remove("d-none");
+        return;
+    }
+    
+    searchResultsFeedback.classList.add("d-none");
+
+    for (const movie of movies) {
+        cardContainer.append(createMovieCard(movie));
+    }
+}
+
+function renderMovieDetails(movie) {
+    if (!dom.movieModal || !dom.movieModalElements) return; // ensure the modal has been cached before trying to render details
+
+    const { title, poster, release, plot, rating, id } = dom.movieModalElements;
+    title.textContent = movie.Title;
+
+    poster.src = movie.Poster !== "N/A" ? movie.Poster : "/images/posterPlaceholder.png";
+    poster.alt = `Poster for ${movie.Title}`;
+    poster.loading = "lazy";
+    poster.onerror = () => {
+        poster.onerror = null; // prevent infinite loop if placeholder image also fails to load
+        poster.src = "/images/posterPlaceholder.png"; 
+    };
+
+    release.textContent = `Release Date: ${movie.Released}`;
+    plot.textContent = movie.Plot;
+    rating.textContent = `IMDb Rating: ${movie.imdbRating}`;
+    id.textContent = `IMDb ID: ${movie.imdbID}`;
+    
+    dom.movieModal.show();
+}
+
+/* =============== Utilities =============== */
+function createMovieCard(movie) {
+    const card = document.createElement("div");
+    card.className = "col";
+
+    const innerCard = document.createElement("div");
+    innerCard.className = "movie-card card h-100 border-0 shadow-lg";
+    innerCard.dataset.imdbId = movie.imdbID; // store the IMDb ID in a data attribute for later retrieval when the card is clicked
+
+    const image = document.createElement("img");
+    image.className = "card-img-top";
+    image.src = movie.Poster !== "N/A" ? movie.Poster : "/images/posterPlaceholder.png";
+    image.alt = `Poster for ${movie.Title}`;
+    image.loading = "lazy";
+    image.onerror = () => {
+        image.onerror = null; // prevent infinite loop if placeholder image also fails to load
+        image.src = "/images/posterPlaceholder.png";
+    };
+
+    const cardBody = document.createElement("div");
+    cardBody.className = "card-body text-center";
+
+    const title = document.createElement("h6");
+    title.className = "card-title mb-0";
+    title.textContent = movie.Title;
+
+    cardBody.appendChild(title);
+    innerCard.appendChild(image);
+    innerCard.appendChild(cardBody);
+    card.appendChild(innerCard);
+
+    return card;
+}
+
+function updateLoadMoreButton() {
+    if (!dom.loadMoreButton) return;
+
+    const loadMoreButton = dom.loadMoreButton;
+
+    if (isLoading) {
+        loadMoreButton.textContent = "Loading...";
+        loadMoreButton.disabled = true;
         return;
     }
 
-    // performs an AJAX call to the OMDb API through a predefined server route "api/movies"
-    $.ajax({
-        url:`/api/movie?search=${encodeURIComponent(userSearch)}`,
-        dataType:"json"
-    }).then(data =>
-        {
-            const insertLocation = document.getElementById("card_container");
-            insertLocation.innerHTML = "";
-            feedback.innerHTML = "";
-            // appends an error message to the page and exits the function if the API call was unsuccessful
-            if (data.Response == "False")
-            {
-                feedback.innerHTML = data.Error;
-                feedback.style.color = "red";
-                return;
-            }
-            // else appends a card containing the movie's data to the page
-            else
-            {
-                var movieCard = createMovieCard(data.Poster, data.Title, data.Released, data.imdbRating, data.Plot);
-                insertLocation.append(movieCard);
-            }
-        });
-    return;
-};
-
-function createMovieCard(image, title, release, rating, plot)
-{
-    // checks if any of the passed in values were undefined and sets them to "-" if they were
-    if (!image || image == "N/A") { image = "-"; }
-    if (!title || title == "N/A") { title = "-"; }
-    if (!release || release == "N/A") { release = "-"; }
-    if (!rating || rating == "N/A") { rating = "-"; }
-    if (!plot || plot == "N/A") { plot = "-"; }
-    
-    // creating HTML elements that will be combined to create a card
-    var completeCard = document.createElement("div");
-    var cardBody = document.createElement("div");
-    var movieImage = document.createElement("img");
-    var movieTitle = document.createElement("p");
-    var movieRelease = document.createElement("p");
-    var imdbRating = document.createElement("p");
-    var moviePlot = document.createElement("p");
-    var cardButton = document.createElement("button");
-
-    // styling the various elements
-    completeCard.className = "card bg-light shadow p-3 mb-5 rounded";
-    cardBody.className = "card-body";
-
-    movieImage.className = "card-img-top";
-    movieImage.src = image;
-    movieImage.alt = `Poster for ${title}`;
-    movieImage.style = "height: 400px; object-fit: scale-down;";
-    movieImage.id = "movieImage";
-
-    movieTitle.className = "card-text text-center";
-    movieTitle.style = "font-weight: bolder; font-size: xx-large;";
-    movieTitle.innerHTML = title;
-    movieTitle.id = "movieTitle";
-    movieTitle.name = title;
-
-    movieRelease.className = "card-text";
-    movieRelease.style = "font-weight: bold;";
-    movieRelease.innerHTML = `Release Date: ${release}`;
-    movieRelease.id = "movieRelease";
-    movieRelease.name = release;
-
-    imdbRating.className = "card-text";
-    imdbRating.style = "font-weight: bold;";
-    imdbRating.innerHTML = `IMDB Rating: ${rating} <hr>`;
-    imdbRating.id = "movieRating";
-    imdbRating.name = rating;
-
-    moviePlot.className = "card-text";
-    moviePlot.innerHTML = plot;
-    moviePlot.id = "moviePlot";
-    moviePlot.name = plot;
-
-    cardButton.type = "button"
-    cardButton.className = "btn btn-primary mr-auto ml-auto";
-    cardButton.setAttribute("data-toggle", "modal");
-    cardButton.setAttribute("data-target", "#myModal");
-    cardButton.style = "background-color: forestgreen; width: 50%; min-width: fit-content; border-radius: 1rem;";
-    cardButton.innerHTML = "Add Search Result";
-
-    // appending the elements together to create the card
-    cardBody.append(movieTitle);
-    cardBody.append(movieRelease);
-    cardBody.append(imdbRating);
-    cardBody.append(moviePlot);
-
-    completeCard.append(movieImage);
-    completeCard.append(cardBody);
-    completeCard.append(cardButton);
-
-    return completeCard;
-};
-
-function searchModal()
-{
-    // gathering the variables from the previous AJAX call
-    var image = document.getElementById("movieImage").src;
-    var title = document.getElementById("movieTitle").name;
-    var release = document.getElementById("movieRelease").name;
-    var rating = document.getElementById("movieRating").name;
-    var plot = document.getElementById("moviePlot").name;
-
-    // deciding what to display to the user on successful AJAX calls
-    var feedback = document.getElementById("user_feedback");
-    var feedbackMessage = "";
-    // checks if the feedback div is empty, which is true when a movie card is first displayed to the user
-    if (feedback.innerHTML == "")
-    {
-        // gives the user a successful feedback message when the AJAX call from "Add Search Result" is performed the first time
-        // normally this means the user hasn't added this movie yet, but a case exists where the user searches for a previously added movie and this feedback is false
-        feedback.style.color = "forestgreen";
-        feedbackMessage = `Successfully added ${title} to your search history!`;
+    if (currentPage <= totalPages) {
+        loadMoreButton.textContent = "Load More";
+        loadMoreButton.disabled = false;
+        loadMoreButton.classList.remove("d-none");
     }
-    // else the feedback div already contains a success message, so an error message should be displayed if the modal's "Yes" is clicked again
-    else
-    {
-        feedback.style.color = "red";
-        feedbackMessage = `${title} was already added to your search history! It wasn't added again.`;
+    else {
+        loadMoreButton.classList.add("d-none");
     }
-    // replacing single quotes with TWO single quotes so that the postgreSQL query doesn't throw a fit
-    var singleQuote = /'/gm;
-    if(title.match(singleQuote)) { title = title.replaceAll("'", "''");}
-    if(plot.match(singleQuote)) { plot = plot.replaceAll("'", "''"); }
+}
 
-    // performing an AJAX call to pass the data to the "/add" API
-    $.ajax({
-        url:"/add",
-        type:"POST",
-        dataType:"json",
-        data:
-        {
-            poster: image,
-            title: title,
-            release: release,
-            rating: rating,
-            plot: plot
-        },
-        success: $('#user_feedback').html(feedbackMessage)
-    });
+function showNotification(message, type = "info", timeout = 4000) {
+    if (!dom.userNotification) return;
+
+    const userNotification = dom.userNotification;
+
+    userNotification.textContent = message;
+    userNotification.className = `alert alert-${type} text-center`;
+    userNotification.classList.remove("d-none");
+
+    if (timeout) {
+        clearTimeout(notificationTimer); // clear any existing timeout to prevent multiple notifications from overlapping or disappearing too quickly
+        notificationTimer = setTimeout(() => {
+            userNotification.classList.add("d-none");
+        }, timeout);
+    }
 }

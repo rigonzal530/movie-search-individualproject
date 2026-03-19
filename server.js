@@ -1,149 +1,70 @@
-/***********************
-  Load Components!
+// Imported libraries
+require('dotenv').config();         // ensures environment variables are available before continuing
+const path = require('path');       // ensures node.js path module is loaded for cross-platform path support
+const express = require('express'); // ensures express framework has been added
+const expressLayouts = require('express-ejs-layouts');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 
-  Express      - A Node.js Framework
-  Body-Parser  - A tool to help use parse the data in a post request
-  Pg-Promise   - A database tool to help use connect to our PostgreSQL database
-***********************/
-const express = require('express'); //Ensure our express framework has been added
+// custom imports
+const db = require('./src/db/connection')
+const userRoutes = require('./src/routes/users.routes');
+const movieRoutes = require('./src/routes/movies.routes');
+const userApiRoutes = require('./src/routes/users.api.routes');
+const movieApiRoutes = require('./src/routes/movies.api.routes');
+const errorHandler = require('./src/middleware/errors');
+const viewUser = require('./src/middleware/viewUser');
+
 const app = express();
-const bodyParser = require('body-parser'); //Ensure our body-parser tool has been added
-app.use(bodyParser.json());              // support json encoded bodies
-app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
-require('dotenv').config(); // ensures environment variables are available before continuing
 
-//Create Database Connection
-const pgp = require('pg-promise')();
 const isProduction = process.env.NODE_ENV === 'production';
-const dbConfig = {
-    connectionString: process.env.DATABASE_URL,
-    ssl: isProduction ? { rejectUnauthorized: false } : false
-};
-const db = pgp(dbConfig);
+if (isProduction) {
+    app.set('trust proxy', 1);
+}
 
-// set the view engine to ejs
-const path = require('path');
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'src', 'views'));
-app.use(express.static(path.join(__dirname, 'src', 'public')));//This line is necessary for us to use relative paths and access our resources directory from web root "/"
+app.set('views', path.join(__dirname, 'src', 'views')); // sets the directory where EJS templates are located
+app.set('layout', 'layout'); // sets the default layout for all views to be rendered within layout.ejs
+
+app.use(express.json());                            // support json encoded bodies
+app.use(express.urlencoded({ extended: true }));    // support encoded bodies
+app.use(express.static(path.join(__dirname, 'src', 'public'))); // necessary for us access our public resources directory
+app.use(expressLayouts);
+
+app.use(session({
+    name: 'movie_search_session',
+    store: new pgSession({
+        pgPromise: db,
+        tableName: 'user_sessions',
+        createTableIfMissing: true
+    }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+    }
+}))
+
+app.use(viewUser); // allows logged in user's details to be used within EJS templates
+app.use('/', userRoutes);
+app.use('/movies', movieRoutes);
+app.use('/api/users', userApiRoutes);
+app.use('/api/movies', movieApiRoutes);
 
 // renders the home page
-app.get('/', (req, res) =>
-{
-    res.render('pages/home', { myTitle: "Home" });
+app.get('/', (req, res) => {
+    res.render('pages/home', { pageTitle: "Home" });
 });
 
-// renders the search history page, which displays all saved movies data in a table
-app.get('/searches', (req, res) =>
-{
-    var getMovies = "SELECT * FROM movies;";
-    db.any(getMovies)
-    .then((data) =>
-    {
-        res.render('pages/searches',
-        {
-            myTitle: "Search History",
-            data: data
-        });
-    })
-    .catch((err) =>
-    {
-        console.log("error: ", err);
-        res.render('pages/searches',
-        {
-            myTitle: "Search History",
-            data: null
-        });
-    })
-});
-
-// route created to remove direct OMBD API calls from the frontend
-app.get('/api/movie', async (req, res) => 
-{
-    const userSearch = req.query.search?.trim();
-    if (!userSearch) {
-        return res.status(400).json({ error: "No search term entered." });
-    }
-
-    // creates the url that will be used to call the OMDb API
-    let url = `https://www.omdbapi.com/?apikey=${process.env.OMDB_API_KEY}&`;
-    // IMDB ID's follow the format of "tt" followed by at least 7 digits https://developer.imdb.com/documentation/key-concepts
-    const imdbIDRegex = /[t]{2}\d{7,}/;
-
-    // enters if "userSearch" was an IMDB id. appends "userSearch" to "url" with the ID format, otherwise uses Title format
-    if (userSearch.match(imdbIDRegex)) {
-        url += `i=${userSearch}`;
-    }
-    else {
-        url += `t=${userSearch}`;
-    }
-
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
-        res.json(data);
-    }
-    catch (err) {
-        res.status(500).json({ error: "Server error while fetching movie data." });
-    }
-});
-
-// adds the searched movie's data to the database
-app.post('/add', (req, res) =>
-{
-    // sets all the variables to the variables passed in from the AJAX call's json
-    const poster = req.body.poster;
-    const title = req.body.title;
-    const releaseDate = req.body.release;
-    const rating = req.body.rating;
-    const plot = req.body.plot;
-    // this query prevents duplicates from being added, but "data" has no way to distinguish whether ON CONFLICT was used or not
-    // consequently, the feedback for attempting to add a duplicate is dealt with in script.js
-    var insertMovie = `INSERT INTO movies(poster, title, release, rating, plot) VALUES('${poster}', '${title}', '${releaseDate}', ${rating}, '${plot}') ON CONFLICT (title) DO NOTHING;`;
-
-    // writes the "insertMovie" query to the database
-    db.any(insertMovie)
-    .then((data) =>
-    {
-        res.status(201).send();
-    })
-    .catch((err) => 
-    {
-        res.status(404).send();
-        console.log("error: ", err);
-    });
-});
-
-// deletes all records in the movies table
-app.post('/delete', (req, res) =>
-{
-    // query to remove all rows from the movies table
-    var deleteAll = "DELETE FROM movies;";
-
-    // writes the "deleteAll" query to the database
-    db.any(deleteAll)
-    .then((data) =>
-    {
-        res.render('pages/searches',
-        {
-            myTitle: "Search History",
-            data: data
-        });
-    })
-    .catch((err) => 
-    {
-        res.render('pages/searches',
-        {
-            myTitle: "Search History",
-            data: null
-        });
-        console.log("error: ", err);
-    });
-});
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`${PORT} is the magic port`);
+    if (!isProduction) {console.log(`http://localhost:${PORT} is the magic port`);}
 });
 
 module.exports = app;
